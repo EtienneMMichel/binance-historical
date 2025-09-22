@@ -1,12 +1,11 @@
-import requests, zipfile, io
+import requests
 import xmltodict
 import os
 from tqdm import tqdm
 from .. import utils
 from .. import exceptions
 import pandas as pd
-import shutil
-from datetime import datetime, timedelta
+from datetime import datetime
 import math
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import ProgrammingError
@@ -128,9 +127,10 @@ def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:
     with tqdm(total=len(symbols)*(end_date - start_date).days*len(timeframes)) as pbar:
         for symbol in symbols:
             _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, data_path, is_local)
-    
+    res = {}
     for symbol in tqdm(symbols):
         symbol = "".join(symbol.split("_"))
+        res[symbol] = {}
         for timeframe in timeframes:
             path = f"{data_path}/{symbol}/{timeframe}"
             if os.path.exists(path):
@@ -139,12 +139,18 @@ def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:
                     data_to_save.reset_index(drop=True, inplace=True)
                     table_name = f"{symbol}_{timeframe}"
                     if is_local:
-                        data_to_save.to_csv(f"{data_path}/{table_name}.csv", index=True)
+                        pass
+                        # data_to_save.to_csv(f"{data_path}/{table_name}.csv", index=True)
                     else:
                         db.save_dataframe(data_to_save, table_name, if_exists='append')
+                    res[symbol][timeframe] = data_to_save
+                    
+                    
                 except FileNotFoundError as e:
                     print(e)
                     continue
                 
     if not is_local:
         utils.delete_temp_data(data_path)
+    
+    return res

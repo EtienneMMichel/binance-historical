@@ -1,5 +1,4 @@
 import requests, zipfile, io
-import xmltodict
 import shutil
 
 def download_zip(url, saving_dir):
