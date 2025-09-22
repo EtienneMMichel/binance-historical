@@ -141,7 +141,6 @@ def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:
                     data_to_save.reset_index(drop=True, inplace=True)
                     table_name = f"{symbol}--{timeframe}"
                     if is_local:
-                        pass
                         data_to_save.to_csv(f"{saving_data_path}/{table_name}.csv", index=True)
                     else:
                         db.save_dataframe(data_to_save, table_name, if_exists='append')
