@@ -131,8 +131,9 @@ def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:
             _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, data_path, is_local)
     res = {}
     for symbol in tqdm(symbols):
+        symbol_standarized = symbol
         symbol = "".join(symbol.split("_"))
-        res[symbol] = {}
+        res[symbol_standarized] = {}
         for timeframe in timeframes:
             path = f"{data_path}/{symbol}/{timeframe}"
             if os.path.exists(path):
@@ -144,7 +145,7 @@ def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:
                         data_to_save.to_csv(f"{saving_data_path}/{table_name}.csv", index=True)
                     else:
                         db.save_dataframe(data_to_save, table_name, if_exists='append')
-                    res[symbol][timeframe] = data_to_save
+                    res[symbol_standarized][timeframe] = data_to_save
                     
                     
                 except FileNotFoundError as e:
