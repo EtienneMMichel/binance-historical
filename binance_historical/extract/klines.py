@@ -24,6 +24,8 @@ def _extract_binance_historical_data(raw_binance_df):
     df =  pd.DataFrame({
         "timestamp":raw_binance_df[list(raw_binance_df.columns)[6]],
         "open_price":raw_binance_df[list(raw_binance_df.columns)[1]],
+        "high_price":raw_binance_df[list(raw_binance_df.columns)[2]],
+        "low_price":raw_binance_df[list(raw_binance_df.columns)[3]],
         "close_price":raw_binance_df[list(raw_binance_df.columns)[4]],
         "volume":raw_binance_df[list(raw_binance_df.columns)[5]],
         "count":raw_binance_df[list(raw_binance_df.columns)[8]],
