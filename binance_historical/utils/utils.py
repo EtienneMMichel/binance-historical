@@ -5,6 +5,7 @@ import xmltodict
 from datetime import datetime
 from .. import exceptions
 import os
+
 import pandas as pd
 
 S3_URL = "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision?delimiter=/&prefix={path}"
@@ -22,10 +23,24 @@ def delete_temp_data(path):
 
 
 
-def get_data(path, next_marker=None):
+def get_data(path, next_marker=None, rotation=False):
     url = S3_URL.format(path=path)
+    print("url: ", url)
     url = url if next_marker is None else url + f"&marker={next_marker}"
-    r = requests.get(url)
+    if rotation:
+        print("ROTATION")
+        from dotenv import load_dotenv
+        from requests_ip_rotator import ApiGateway, EXTRA_REGIONS
+        load_dotenv()
+        AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+        AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+        gateway = ApiGateway(url, access_key_id = AWS_ACCESS_KEY_ID, access_key_secret = AWS_SECRET_ACCESS_KEY)
+        gateway.start()
+        s = requests.Session()
+        s.mount(url, gateway)
+        r = s.get(url)
+    else:
+        r = requests.get(url)
     return xmltodict.parse(r.text)
 
 def get_date(zip_file_name):
@@ -53,15 +68,16 @@ def extract_data(db, data, path, start_date, end_date, data_path, is_local=False
                 continue
             if start_date <= date and date < end_date: 
                 os.makedirs(saving_dir, exist_ok=True)
+                print('FETCHING_URL.format(file_path=content["Key"]): ', FETCHING_URL.format(file_path=content["Key"]))
                 download_zip(url=FETCHING_URL.format(file_path=content["Key"]), saving_dir=saving_dir)
 
-def get_binance_data(path, db, start_date, end_date, data_path, is_local=False):
+def get_binance_data(path, db, start_date, end_date, data_path, is_local=False, rotation=False):
     next_marker = None
-    data = get_data(path)
+    data = get_data(path,rotation=rotation)
     extract_data(db, data, path, start_date, end_date, data_path, is_local)
     while 'NextMarker' in list(data.get("ListBucketResult", {}).keys()):
         next_marker = data["ListBucketResult"]['NextMarker']
-        data = get_data(path, next_marker)
+        data = get_data(path, next_marker=next_marker, rotation=rotation)
         extract_data(db, data, path, start_date, end_date, data_path, is_local)
 
 

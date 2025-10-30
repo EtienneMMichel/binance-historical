@@ -7,8 +7,9 @@ def test_extract_fundings():
     timeframes = ["8h"]
     start_date = dt.datetime.now() - dt.timedelta(days=365)
     end_date = dt.datetime.now()
-    market="market"
-    extract_klines(symbols=symbols, timeframes=timeframes, start_date=start_date, end_date=end_date, is_local=is_local, market=market)
+    market="futures"
+    rotation = False
+    extract_klines(symbols=symbols, timeframes=timeframes, start_date=start_date, end_date=end_date, is_local=is_local, market=market, rotation=rotation)
 
 
 if __name__ == "__main__":

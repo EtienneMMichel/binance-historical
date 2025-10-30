@@ -9,6 +9,7 @@ from datetime import datetime
 import math
 from dateutil.relativedelta import relativedelta
 from sqlalchemy.exc import ProgrammingError
+from .. import exceptions
 
 SAVING_DIR = "./DATA/temp/data"
 
@@ -66,8 +67,13 @@ def _cloud_saved(timeframe, fetch_date, next_fetch_date, symbol, is_local=True):
     return count >= (next_fetch_date - fetch_date).days
 
 
-def _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, data_path, is_local=False,market="spot"):
-    market_type = utils.MARKET_MAPPING[symbol.split("_")[1]] if market == "futures" else None
+def _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, data_path, is_local=False,market="spot", rotation=False):
+    market_type = None
+    print("market: ", market)
+    if market == "futures":
+        market_type = utils.MARKET_MAPPING.get(symbol.split("_")[1], None)
+        if market_type is None:
+            raise exceptions.FailedToExtractException(f"Failed to categorized symbol {symbol}")
     symbol = "".join(symbol.split("_"))
     for timeframe in timeframes:
         fetch_date = start_date
@@ -82,12 +88,12 @@ def _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, d
 
             next_fetch_date = fetch_date + r_delta
             if not _local_saved(timeframe, fetch_date, symbol, is_next_month, data_path) and not _cloud_saved(timeframe, fetch_date, next_fetch_date, symbol, is_local):
-                utils.get_binance_data(path, db, fetch_date, next_fetch_date, data_path, is_local)
+                utils.get_binance_data(path, db, fetch_date, next_fetch_date, data_path, is_local, rotation=rotation)
             days_to_update = (next_fetch_date - fetch_date).days if is_next_month else 1
             fetch_date = next_fetch_date
             pbar.update(days_to_update)
 
-def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:datetime, is_local:bool=True, db_config_info=None, data_path=None, saving_data_path=None, market="spot"):
+def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:datetime, is_local:bool=True, db_config_info=None, data_path=None, saving_data_path=None, market="spot", rotation=False):
     db = utils.Database(db_config_info) if not is_local else None
     data_path = data_path if not data_path is None else "DATA/temp/data"
     saving_data_path = saving_data_path if not saving_data_path is None else "DATA"
@@ -95,7 +101,7 @@ def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:
         data_path += "/futures"
     with tqdm(total=len(symbols)*(end_date - start_date).days*len(timeframes)) as pbar:
         for symbol in symbols:
-            _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, data_path, is_local,market)
+            _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, data_path, is_local,market, rotation=rotation)
     res = {}
     for symbol in tqdm(symbols):
         symbol_standarized = symbol

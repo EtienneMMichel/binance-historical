@@ -14,7 +14,9 @@ dependencies = [
     "pandas (>=2.3.2,<3.0.0)",
     "sqlalchemy (>=2.0.43,<3.0.0)",
     "psycopg2 (>=2.9.10,<3.0.0)",
-    "xmltodict (>=1.0.2,<2.0.0)"
+    "xmltodict (>=1.0.2,<2.0.0)",
+    "requests-ip-rotator (>=1.0.14,<2.0.0)",
+    "python-dotenv (>=1.2.1,<2.0.0)"
 ]
 
 

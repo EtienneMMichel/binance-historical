@@ -28,8 +28,10 @@ def _cloud_saved(fetch_date, next_fetch_date, symbol, is_local):
     if is_local == True:
         return False
 
-def _extract_product_fundings(db, product, start_date, end_date, pbar, data_path, is_local):
-    market = utils.MARKET_MAPPING[product.split("_")[1]]
+def _extract_product_fundings(db, product, start_date, end_date, pbar, data_path, is_local, rotation=False):
+    market = utils.MARKET_MAPPING.get(product.split("_")[1], None)
+    if market is None:
+        raise exceptions.FailedToExtractException(f"Failed to categorized product {product}")
     symbol = "".join(product.split("_"))
     fetch_date = start_date
     while (end_date - fetch_date).days > 0:
@@ -38,7 +40,7 @@ def _extract_product_fundings(db, product, start_date, end_date, pbar, data_path
         path = f"data/futures/{market}/monthly/fundingRate/{symbol}/" if is_next_month else f"data/futures/{market}/daiky/fundingRate/{symbol}/"
         next_fetch_date = fetch_date + r_delta
         if not _local_saved(fetch_date, symbol, is_next_month, data_path) and not _cloud_saved(fetch_date, next_fetch_date, symbol, is_local):
-            utils.get_binance_data(path, db, fetch_date, next_fetch_date, data_path, is_local)
+            utils.get_binance_data(path, db, fetch_date, next_fetch_date, data_path, is_local, rotation=rotation)
         days_to_update = (next_fetch_date - fetch_date).days if is_next_month else 1
         fetch_date = next_fetch_date
         pbar.update(days_to_update)
@@ -58,7 +60,7 @@ def _extract_binance_historical_data(raw_binance_df):
     return df
 
 
-def extract_fundings(products:List[str], start_date:datetime, end_date:datetime, is_local:bool=True, db_config_info=None, data_path=None, saving_data_path=None):
+def extract_fundings(products:List[str], start_date:datetime, end_date:datetime, is_local:bool=True, db_config_info=None, data_path=None, saving_data_path=None, rotation=False):
     db = utils.Database(db_config_info) if not is_local else None
     data_path = data_path if not data_path is None else "DATA/temp/data"
     saving_data_path = saving_data_path if not saving_data_path is None else "DATA"
@@ -67,7 +69,7 @@ def extract_fundings(products:List[str], start_date:datetime, end_date:datetime,
         for product in products:
             if len(product.split("_")) != 2:
                 raise exceptions.FailedToExtractException(f"Unsplitable product : {product}")
-            _extract_product_fundings(db, product, start_date, end_date, pbar, data_path, is_local)
+            _extract_product_fundings(db, product, start_date, end_date, pbar, data_path, is_local,rotation=rotation)
     res = {}
     for product in tqdm(products):
         product_standarized = product
