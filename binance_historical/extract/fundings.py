@@ -12,11 +12,7 @@ from sqlalchemy.exc import ProgrammingError
 from typing import List
 
 
-MARKET_MAPPING = {
-    "USDC":"um",
-    "USDT":"um",
-    "BUSD":"um",
-}
+
 
 SAVING_DIR = "./DATA/temp/data"
 
@@ -33,7 +29,7 @@ def _cloud_saved(fetch_date, next_fetch_date, symbol, is_local):
         return False
 
 def _extract_product_fundings(db, product, start_date, end_date, pbar, data_path, is_local):
-    market = MARKET_MAPPING[product.split("_")[1]]
+    market = utils.MARKET_MAPPING[product.split("_")[1]]
     symbol = "".join(product.split("_"))
     fetch_date = start_date
     while (end_date - fetch_date).days > 0:

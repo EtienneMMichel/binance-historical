@@ -16,7 +16,7 @@ SAVING_DIR = "./DATA/temp/data"
 
 def _extract_binance_historical_data(raw_binance_df):
     df =  pd.DataFrame({
-        "timestamp":raw_binance_df[list(raw_binance_df.columns)[6]],
+        "timestamp":raw_binance_df[list(raw_binance_df.columns)[0]],
         "open_price":raw_binance_df[list(raw_binance_df.columns)[1]],
         "high_price":raw_binance_df[list(raw_binance_df.columns)[2]],
         "low_price":raw_binance_df[list(raw_binance_df.columns)[3]],
@@ -26,7 +26,12 @@ def _extract_binance_historical_data(raw_binance_df):
         "buy_volume":raw_binance_df[list(raw_binance_df.columns)[9]],
         "sell_volume":raw_binance_df[list(raw_binance_df.columns)[10]]
     })
-    df['timestamp'] =  df['timestamp']*eval(f"1e-{len(str(df['timestamp'].tolist()[0])) - 10}")
+    df.reset_index(inplace=True, drop=True)
+    try:
+        df['timestamp'] =  df['timestamp'].astype(int)*eval(f"1e-{len(str(df['timestamp'].tolist()[0])) - 10}")
+    except ValueError:
+        df = df.loc[1:]
+        df['timestamp'] =  df['timestamp'].astype(int)*eval(f"1e-{len(str(df['timestamp'].tolist()[0])) - 10}")
     df["timestamp"] = [math.ceil(d) for d in df['timestamp'].tolist()]
     df['datetime'] =  pd.to_datetime(df["timestamp"],unit='s')
     return df
@@ -35,10 +40,15 @@ def _extract_binance_historical_data(raw_binance_df):
 
 
 def _local_saved(timeframe, fetch_date, symbol, is_next_month, data_path):
+    return False
     month = "0" + str(fetch_date.month) if fetch_date.month < 10 else str(fetch_date.month)
     day = "0" + str(fetch_date.day) if fetch_date.day < 10 else str(fetch_date.day)
     fetch_date_str = f"{fetch_date.year}-{month}"
     if not is_next_month: fetch_date_str += f"-{day}"
+
+    print('----------')
+    print(f"{data_path}/{symbol}/{timeframe}/{symbol}-{timeframe}-{fetch_date_str}.csv")
+    print(os.path.exists(f"{data_path}/{symbol}/{timeframe}/{symbol}-{timeframe}-{fetch_date_str}.csv"))
     return os.path.exists(f"{data_path}/{symbol}/{timeframe}/{symbol}-{timeframe}-{fetch_date_str}.csv")
 
 def _cloud_saved(timeframe, fetch_date, next_fetch_date, symbol, is_local=True):
@@ -56,14 +66,20 @@ def _cloud_saved(timeframe, fetch_date, next_fetch_date, symbol, is_local=True):
     return count >= (next_fetch_date - fetch_date).days
 
 
-def _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, data_path, is_local=False):
+def _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, data_path, is_local=False,market="spot"):
+    market_type = utils.MARKET_MAPPING[symbol.split("_")[1]] if market == "futures" else None
     symbol = "".join(symbol.split("_"))
     for timeframe in timeframes:
         fetch_date = start_date
         while (end_date - fetch_date).days > 0:
             is_next_month = fetch_date + relativedelta(months=1) <= end_date
             r_delta  = relativedelta(months=1) if is_next_month else relativedelta(days=1)
-            path = f"data/spot/monthly/klines/{symbol}/{timeframe}/" if is_next_month else f"data/spot/daily/klines/{symbol}/{timeframe}/"
+            if market == "spot":
+                path = f"data/spot/monthly/klines/{symbol}/{timeframe}/" if is_next_month else f"data/spot/daily/klines/{symbol}/{timeframe}/"
+            else:
+                path = f"data/futures/{market_type}/monthly/klines/{symbol}/{timeframe}/" if is_next_month else f"data/futures/{market_type}/daily/klines/{symbol}/{timeframe}/"
+                
+
             next_fetch_date = fetch_date + r_delta
             if not _local_saved(timeframe, fetch_date, symbol, is_next_month, data_path) and not _cloud_saved(timeframe, fetch_date, next_fetch_date, symbol, is_local):
                 utils.get_binance_data(path, db, fetch_date, next_fetch_date, data_path, is_local)
@@ -71,14 +87,15 @@ def _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, d
             fetch_date = next_fetch_date
             pbar.update(days_to_update)
 
-def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:datetime, is_local:bool=True, db_config_info=None, data_path=None, saving_data_path=None):
+def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:datetime, is_local:bool=True, db_config_info=None, data_path=None, saving_data_path=None, market="spot"):
     db = utils.Database(db_config_info) if not is_local else None
     data_path = data_path if not data_path is None else "DATA/temp/data"
     saving_data_path = saving_data_path if not saving_data_path is None else "DATA"
-    
+    if market == "futures":
+        data_path += "/futures"
     with tqdm(total=len(symbols)*(end_date - start_date).days*len(timeframes)) as pbar:
         for symbol in symbols:
-            _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, data_path, is_local)
+            _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, data_path, is_local,market)
     res = {}
     for symbol in tqdm(symbols):
         symbol_standarized = symbol
@@ -86,11 +103,12 @@ def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:
         res[symbol_standarized] = {}
         for timeframe in timeframes:
             path = f"{data_path}/{symbol}/{timeframe}"
+            print(path)
             if os.path.exists(path):
                 try:
                     data_to_save = utils.get_data_to_save(path, _extract_binance_historical_data)
                     data_to_save.reset_index(drop=True, inplace=True)
-                    table_name = f"{symbol}--{timeframe}"
+                    table_name = f"{market}--{symbol}--{timeframe}"
                     if is_local:
                         data_to_save.to_csv(f"{saving_data_path}/{table_name}.csv", index=True)
                     else:
