@@ -109,7 +109,6 @@ def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:
         res[symbol_standarized] = {}
         for timeframe in timeframes:
             path = f"{data_path}/{symbol}/{timeframe}"
-            print(path)
             if os.path.exists(path):
                 try:
                     data_to_save = utils.get_data_to_save(path, _extract_binance_historical_data)

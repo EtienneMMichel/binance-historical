@@ -25,7 +25,6 @@ def delete_temp_data(path):
 
 def get_data(path, next_marker=None, rotation=False):
     url = S3_URL.format(path=path)
-    print("url: ", url)
     url = url if next_marker is None else url + f"&marker={next_marker}"
     if rotation:
         print("ROTATION")
@@ -68,7 +67,6 @@ def extract_data(db, data, path, start_date, end_date, data_path, is_local=False
                 continue
             if start_date <= date and date < end_date: 
                 os.makedirs(saving_dir, exist_ok=True)
-                print('FETCHING_URL.format(file_path=content["Key"]): ', FETCHING_URL.format(file_path=content["Key"]))
                 download_zip(url=FETCHING_URL.format(file_path=content["Key"]), saving_dir=saving_dir)
 
 def get_binance_data(path, db, start_date, end_date, data_path, is_local=False, rotation=False):
