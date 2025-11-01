@@ -87,3 +87,4 @@ def get_data_to_save(path, extract_binance_historical_data):
         res = df.copy(deep=True) if res is None else pd.concat([res, df], axis=0)
     
     return res
+

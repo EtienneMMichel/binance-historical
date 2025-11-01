@@ -35,13 +35,13 @@ def _extract_product_fundings(db, product, start_date, end_date, pbar, data_path
     symbol = "".join(product.split("_"))
     fetch_date = start_date
     while (end_date - fetch_date).days > 0:
-        is_next_month = fetch_date + relativedelta(months=1) <= end_date
-        r_delta  = relativedelta(months=1) if is_next_month else relativedelta(days=1)
-        path = f"data/futures/{market}/monthly/fundingRate/{symbol}/" if is_next_month else f"data/futures/{market}/daiky/fundingRate/{symbol}/"
+        is_month_fully_completed = fetch_date + relativedelta(months=1) > end_date
+        r_delta  = relativedelta(months=1) if not is_month_fully_completed else relativedelta(days=1)
+        path = f"data/futures/{market}/monthly/fundingRate/{symbol}/" if not is_month_fully_completed else f"data/futures/{market}/daily/fundingRate/{symbol}/"
         next_fetch_date = fetch_date + r_delta
-        if not _local_saved(fetch_date, symbol, is_next_month, data_path) and not _cloud_saved(fetch_date, next_fetch_date, symbol, is_local):
-            utils.get_binance_data(path, db, fetch_date, next_fetch_date, data_path, is_local, rotation=rotation)
-        days_to_update = (next_fetch_date - fetch_date).days if is_next_month else 1
+        # if not utils.is_local_saved(data_path, symbol, fetch_date, mode=utils.LocalSavedModes.FUNDING, is_month_fully_completed=is_month_fully_completed):
+        utils.get_binance_data(path, db, fetch_date, next_fetch_date, data_path, is_local, rotation=rotation)
+        days_to_update = (next_fetch_date - fetch_date).days if not is_month_fully_completed else 1
         fetch_date = next_fetch_date
         pbar.update(days_to_update)
 

@@ -5,7 +5,7 @@ def test_extract_fundings():
     is_local = True
     symbols = ["BTC_USDT", "ETH_USDT"]
     timeframes = ["8h"]
-    start_date = dt.datetime.now() - dt.timedelta(days=365)
+    start_date = dt.datetime.strptime("2024-01-01", format="%Y-%m-%d")
     end_date = dt.datetime.now()
     market="futures"
     rotation = False

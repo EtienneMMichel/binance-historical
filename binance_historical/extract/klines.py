@@ -39,19 +39,6 @@ def _extract_binance_historical_data(raw_binance_df):
 
 
 
-
-def _local_saved(timeframe, fetch_date, symbol, is_next_month, data_path):
-    return False
-    month = "0" + str(fetch_date.month) if fetch_date.month < 10 else str(fetch_date.month)
-    day = "0" + str(fetch_date.day) if fetch_date.day < 10 else str(fetch_date.day)
-    fetch_date_str = f"{fetch_date.year}-{month}"
-    if not is_next_month: fetch_date_str += f"-{day}"
-
-    print('----------')
-    print(f"{data_path}/{symbol}/{timeframe}/{symbol}-{timeframe}-{fetch_date_str}.csv")
-    print(os.path.exists(f"{data_path}/{symbol}/{timeframe}/{symbol}-{timeframe}-{fetch_date_str}.csv"))
-    return os.path.exists(f"{data_path}/{symbol}/{timeframe}/{symbol}-{timeframe}-{fetch_date_str}.csv")
-
 def _cloud_saved(timeframe, fetch_date, next_fetch_date, symbol, is_local=True):
     if is_local:
         return False
@@ -78,27 +65,25 @@ def _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, d
     for timeframe in timeframes:
         fetch_date = start_date
         while (end_date - fetch_date).days > 0:
-            is_next_month = fetch_date + relativedelta(months=1) <= end_date
-            r_delta  = relativedelta(months=1) if is_next_month else relativedelta(days=1)
+            is_month_fully_completed = fetch_date + relativedelta(months=1) > end_date
             if market == "spot":
-                path = f"data/spot/monthly/klines/{symbol}/{timeframe}/" if is_next_month else f"data/spot/daily/klines/{symbol}/{timeframe}/"
+                path = f"data/spot/monthly/klines/{symbol}/{timeframe}/" if not is_month_fully_completed else f"data/spot/daily/klines/{symbol}/{timeframe}/"
             else:
-                path = f"data/futures/{market_type}/monthly/klines/{symbol}/{timeframe}/" if is_next_month else f"data/futures/{market_type}/daily/klines/{symbol}/{timeframe}/"
-                
+                path = f"data/futures/{market_type}/monthly/klines/{symbol}/{timeframe}/" if not is_month_fully_completed else f"data/futures/{market_type}/daily/klines/{symbol}/{timeframe}/"
 
+            r_delta  = relativedelta(months=1) if not is_month_fully_completed else relativedelta(days=1)
             next_fetch_date = fetch_date + r_delta
-            if not _local_saved(timeframe, fetch_date, symbol, is_next_month, data_path) and not _cloud_saved(timeframe, fetch_date, next_fetch_date, symbol, is_local):
-                utils.get_binance_data(path, db, fetch_date, next_fetch_date, data_path, is_local, rotation=rotation)
-            days_to_update = (next_fetch_date - fetch_date).days if is_next_month else 1
+            if not utils.is_local_saved(data_path, symbol, fetch_date, mode=utils.LocalSavedModes.TIMEFRAME, mode_value=timeframe, is_month_fully_completed=is_month_fully_completed):
+                pass
+            utils.get_binance_data(path, db, fetch_date, next_fetch_date, data_path, is_local, rotation=rotation)
+            days_to_update = (next_fetch_date - fetch_date).days if not is_month_fully_completed else 1
             fetch_date = next_fetch_date
             pbar.update(days_to_update)
 
 def extract_klines(symbols:list, timeframes:list, start_date:datetime, end_date:datetime, is_local:bool=True, db_config_info=None, data_path=None, saving_data_path=None, market="spot", rotation=False):
     db = utils.Database(db_config_info) if not is_local else None
-    data_path = data_path if not data_path is None else "DATA/temp/data"
+    data_path = f"DATA/temp/data/klines/{market}"
     saving_data_path = saving_data_path if not saving_data_path is None else "DATA"
-    if market == "futures":
-        data_path += "/futures"
     with tqdm(total=len(symbols)*(end_date - start_date).days*len(timeframes)) as pbar:
         for symbol in symbols:
             _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, data_path, is_local,market, rotation=rotation)
