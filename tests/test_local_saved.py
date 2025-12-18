@@ -1,8 +1,8 @@
-from binance_historical.utils import is_local_saved
+from binance_historical.utils import is_already_saved
 
 
 def test_local_saved():
-    is_local_saved()
+    is_already_saved()
 
 
 if __name__ == "__main__":

@@ -73,9 +73,10 @@ def _extract_symbol_klines(db, timeframes, symbol, start_date, end_date, pbar, d
 
             r_delta  = relativedelta(months=1) if not is_month_fully_completed else relativedelta(days=1)
             next_fetch_date = fetch_date + r_delta
-            if not utils.is_local_saved(data_path, symbol, fetch_date, mode=utils.LocalSavedModes.TIMEFRAME, mode_value=timeframe, is_month_fully_completed=is_month_fully_completed):
-                pass
-            utils.get_binance_data(path, db, fetch_date, next_fetch_date, data_path, is_local, rotation=rotation)
+            if is_local==False and not utils.is_already_saved(data_path, symbol, fetch_date, mode=utils.SavedModes.TIMEFRAME, mode_value=timeframe, is_month_fully_completed=is_month_fully_completed, is_local=True):
+                utils.get_binance_data(path, db, fetch_date, next_fetch_date, data_path, is_local, rotation=rotation)
+            elif not utils.is_already_saved(data_path, symbol, fetch_date, mode=utils.SavedModes.TIMEFRAME, mode_value=timeframe, is_month_fully_completed=is_month_fully_completed, is_local=True):
+                utils.get_binance_data(path, db, fetch_date, next_fetch_date, data_path, is_local, rotation=rotation)
             days_to_update = (next_fetch_date - fetch_date).days if not is_month_fully_completed else 1
             fetch_date = next_fetch_date
             pbar.update(days_to_update)

@@ -2,7 +2,7 @@ from binance_historical.extract import extract_fundings
 import datetime as dt
 
 def test_extract_fundings():
-    is_local = True
+    is_local = False
     products = ["BTC_USDC", "ETH_USDC"]
     start_date = dt.datetime.now() - dt.timedelta(days=365)
     end_date = dt.datetime.now()

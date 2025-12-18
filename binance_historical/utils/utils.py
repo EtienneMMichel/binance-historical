@@ -63,9 +63,7 @@ def extract_data(db, data, path, start_date, end_date, data_path, is_local=False
             saving_dir = data_path + "/" + "/".join(content["Key"].split("/")[-3:-1])
             zip_file_name = content["Key"].split("/")[-1].split(".")[0].split("-")
             date = get_date(zip_file_name)
-            if not is_local and db.already_in_table(path, date):
-                continue
-            if start_date <= date and date < end_date: 
+            if start_date <= date and date < end_date:
                 os.makedirs(saving_dir, exist_ok=True)
                 download_zip(url=FETCHING_URL.format(file_path=content["Key"]), saving_dir=saving_dir)
 
